@@ -3,6 +3,7 @@
 //  DentalTimer
 //
 
+import AudioToolbox
 import Foundation
 import Combine
 
@@ -17,6 +18,8 @@ final class TimerSession: ObservableObject {
     let steps: [BrushingStep]
     private var runnerTask: Task<Void, Never>?
     private var pauseStartDate: Date?
+
+    private var saveLeft: Int = 0
 
     init(steps: [BrushingStep]) {
         self.steps = steps
@@ -101,11 +104,15 @@ final class TimerSession: ObservableObject {
                 }
                 let elapsed = Date().timeIntervalSince(currentStepStartDate)
                 let left = duration - elapsed
+
+                prepareForPlayingSystemSound(left: left)
+                
                 if left <= 0 {
                     remaining = 0
                     break
                 }
                 remaining = left
+
                 try? await Task.sleep(nanoseconds: 100_000_000)
             }
 
@@ -114,5 +121,39 @@ final class TimerSession: ObservableObject {
         }
         isFinished = true
         runnerTask = nil
+    }
+
+    private func prepareForPlayingSystemSound(left: TimeInterval) {
+        let ceilLeft = Int(ceil(max(0, left)))
+
+        if saveLeft != ceilLeft {
+            saveLeft = ceilLeft
+
+            switch saveLeft {
+            case 3:
+                playSystemSound(resource: .low)
+            case 2:
+                playSystemSound(resource: .low)
+            case 1:
+                playSystemSound(resource: .low)
+            case 0:
+                playSystemSound(resource: .high)
+            default:
+                break
+            }
+        }
+    }
+
+    enum SystemSound: String {
+        case high = "music_high"
+        case low = "music_low"
+    }
+
+    private func playSystemSound(resource: SystemSound) {
+        guard let url = Bundle.main.url(forResource: resource.rawValue, withExtension: "wav") else { return }
+        
+        var soundID: SystemSoundID = 0
+        AudioServicesCreateSystemSoundID(url as CFURL, &soundID)
+        AudioServicesPlaySystemSound(soundID)
     }
 }

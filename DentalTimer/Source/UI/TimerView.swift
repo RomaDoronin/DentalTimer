@@ -39,24 +39,10 @@ struct TimerView: View {
             VStack(spacing: 24) {
                 header(for: step)
 
-                Text(formatRemaining(session.remaining))
-                    .font(.system(size: 110, weight: .thin, design: .rounded).monospacedDigit())
-                    .contentTransition(.numericText())
-                    .opacity(session.isPaused ? 0.4 : 1.0)
-                    .padding(.top, 150)
+                Spacer()
 
-                TimelineView(.animation) { context in
-                    ProgressView(value: progress(for: step, at: context.date))
-                        .tint(step.kind == .stage ? .accentColor : .orange)
-                }
-                .padding(.horizontal, 40)
-
-                if session.isPaused {
-                    Text("PAUSED")
-                        .font(.subheadline.weight(.heavy))
-                        .foregroundStyle(.secondary)
-                        .tracking(2)
-                }
+                circularProgress(for: step)
+                    .padding(.horizontal, 48)
 
                 Spacer()
 
@@ -93,6 +79,38 @@ struct TimerView: View {
             }
             .padding(.top, 40)
         }
+    }
+
+    private func circularProgress(for step: BrushingStep) -> some View {
+        let tint = step.kind == .stage ? Color.accentColor : Color.orange
+        return ZStack {
+            Circle()
+                .stroke(Color.primary.opacity(0.08), lineWidth: 18)
+
+            TimelineView(.animation) { context in
+                Circle()
+                    .trim(from: 0, to: progress(for: step, at: context.date))
+                    .stroke(
+                        tint,
+                        style: StrokeStyle(lineWidth: 18, lineCap: .round)
+                    )
+                    .rotationEffect(.degrees(-90))
+            }
+
+            Text(formatRemaining(session.remaining))
+                .font(.system(size: 80, weight: .thin, design: .rounded).monospacedDigit())
+                .contentTransition(.numericText())
+                .opacity(session.isPaused ? 0.4 : 1.0)
+
+            if session.isPaused {
+                Text("PAUSED")
+                    .font(.caption.weight(.heavy))
+                    .foregroundStyle(.secondary)
+                    .tracking(2)
+                    .padding(.top, 110)
+            }
+        }
+        .aspectRatio(1, contentMode: .fit)
     }
 
     @ViewBuilder
